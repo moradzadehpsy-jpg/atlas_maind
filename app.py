@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 
 # ۱. تنظیمات صفحه
 st.set_page_config(page_title="اطلس مایند | Mind Atlas", page_icon="🧠", layout="centered")
@@ -9,12 +9,12 @@ st.caption("فضایی امن، صمیمانه و بدون قضاوت برای �
 
 # ۲. بررسی کلید API
 if "GEMINI_API_KEY" not in st.secrets:
-    st.error("لطفاً کلید API را در بخش Secrets اضافه کنید.")
+    st.error("لطفاً کلید GEMINI_API_KEY را در بخش Secrets اضافه کنید.")
     st.stop()
 
 api_key = st.secrets["GEMINI_API_KEY"]
 
-# ۳. طراحی پرامپت با تاکید ویژه بر «لحن انسانی و درمانگرانه»
+# ۳. طراحی پرامپت با تاکید ویژه بر لحن انسانی و روانشناختی
 HUMANIZED_CLINICAL_PROMPT = """
 تو «اطلس مایند» هستی؛ یک روانشناس بالینی و زوج‌درمانگر صمیمی، بسیار باتجربه، آرام و همدل.
 بزرگ‌ترین هدف تو این است که کاربر احساس کند با یک «انسان واقعی، فهمیده و پذیرا» چت می‌کند، نه یک ربات خشک یا کتاب قانون!
@@ -31,39 +31,42 @@ HUMANIZED_CLINICAL_PROMPT = """
 - ردیابی طرحواره‌ها: به باورهای عمیق کاربر درباره خودش (مثل حس نقص، شرم یا سرزنش خود) توجه کن.
 """
 
-# ۴. راه‌اندازی مدل
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    system_instruction=HUMANIZED_CLINICAL_PROMPT
-)
+# ۴. راه‌اندازی کلاینت جدید گوگل
+client = genai.Client(api_key=api_key)
 
-if "chat" not in st.session_state:
-    st.session_state.chat = model.start_chat(history=[])
+# ۵. مدیریت حافظه چت
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        {"role": "assistant", "content": "سلام، خوش اومدید. من اینجام تا در یک فضای کاملاً امن و محرمانه، بدون هیچ قضاوت یا تعارفی به حرفاتون گوش بدم.\n\nدوست داری از کجای رابطه‌تون یا دغدغه‌ای که الان داری شروع کنیم؟"}
+    ]
 
-# پیام شروع صمیمی
-if len(st.session_state.messages) == 0:
-    welcome_msg = "سلام، خوش اومدی. من اینجام تا در یک فضای کاملاً امن و محرمانه، بدون هیچ قضاوت یا تعارفی به حرفات گوش بدم.\n\nدوست داری از کجای رابطه‌تون یا دغدغه‌ای که الان داری شروع کنیم؟"
-    st.session_state.messages.append({"role": "assistant", "content": welcome_msg})
-
-# ۵. نمایش پیام‌ها
+# ۶. نمایش پیام‌ها
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# ۶. دریافت پیام از کاربر
-if user_input := st.chat_input("هر چی توی دلت هست رو اینجا بنویس..."):
-    st.session_state.messages.append({"role": "user", "content": user_input})
+# ۷. دریافت ورودی و ارسال پاسخ
+if prompt := st.chat_input("هر چی توی دلت هست رو اینجا بنویس..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("در حال پاسخگویی..."):
+        with st.spinner("در حال نوشتن پاسخ..."):
             try:
-                response = st.session_state.chat.send_message(user_input)
+                # بازسازی تاریخچه گفتگو برای مدل
+                contents_history = []
+                for m in st.session_state.messages:
+                    contents_history.append({"role": m["role"], "parts": [{"text": m["content"]}]})
+
+                response = client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=contents_history,
+                    config={'system_instruction': HUMANIZED_CLINICAL_PROMPT}
+                )
+
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
-                st.error(f"خطایی رخ داد: {e}")
+                st.error(f"خطا در دریافت پاسخ: {e}")
+                
