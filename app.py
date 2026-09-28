@@ -1,5 +1,5 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 
 # ۱. تنظیمات اولیه صفحه
 st.set_page_config(page_title="اطلس مایند | Mind Atlas", page_icon="🧠", layout="centered")
@@ -26,14 +26,21 @@ SYSTEM_PROMPT = """
 ۴. در پایان هر پاسخ فقط یک سوال باز جهت ردیابی طرحواره‌ها و الگوهای ارتباطی بپرس.
 """
 
-# ۴. راه‌اندازی کلاینت گوگل
-client = genai.Client(api_key=api_key)
+# ۴. راه‌اندازی کلاینت گوگل با مدل معتبر
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    system_instruction=SYSTEM_PROMPT
+)
 
 # ۵. مدیریت حافظه چت
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "سلام، خوش اومدید. من اینجام تا در یک فضای کاملاً امن و محرمانه، بدون هیچ قضاوت یا تعارفی به حرفاتون گوش بدم.\n\nدوست داری از کجای رابطه‌تون یا دغدغه‌ای که الان داری شروع کنیم؟"}
     ]
+
+if "chat_session" not in st.session_state:
+    st.session_state.chat_session = model.start_chat(history=[])
 
 # ۶. نمایش پیام‌های قبلی
 for message in st.session_state.messages:
@@ -49,17 +56,7 @@ if prompt := st.chat_input("هر چی توی دلت هست رو اینجا بن�
     with st.chat_message("assistant"):
         with st.spinner("در حال فکر کردن..."):
             try:
-                # تبدیل تاریخچه برای ارسال به مدل
-                contents_history = []
-                for m in st.session_state.messages:
-                    contents_history.append({"role": m["role"], "parts": [{"text": m["content"]}]})
-
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=contents_history,
-                    config={'system_instruction': SYSTEM_PROMPT}
-                )
-
+                response = st.session_state.chat_session.send_message(prompt)
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
