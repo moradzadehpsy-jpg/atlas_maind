@@ -1,13 +1,18 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import numpy as np
 import matplotlib.pyplot as plt
 
-# تنظیمات کلید API
+# کلید API مستقیم
 API_KEY = "AQ.Ab8RN6LMAHhN8qtYAgijv7EgRlUjs_aqRGEt2wJsJVmO0cZwag"
-genai.configure(api_key=API_KEY)
 
-# ساخت مدل هوش مصنوعی با دستورالعمل بالینی (System Instruction)
+# ساخت کلاینت جدید
+try:
+    client = genai.Client(api_key=API_KEY)
+except Exception as e:
+    st.error(f"خطا در ساخت کلاینت: {e}")
+
 system_prompt = """
 تو یک روانشناس بالینی متخصص در حوزه اختلالات جنسی و زوج‌درمانی هستی. 
 وظیفه تو مدیریت یک مصاحبه بالینی کوتاه، همدلانه و دقیق برای پلتفرم «اطلس مایند» است.
@@ -17,11 +22,6 @@ system_prompt = """
 ۲. لحن تو باید کاملاً همدلانه، بدون قضاوت، حرفه‌ای و کوتاه باشد (حداکثر ۲ تا ۳ جمله).
 ۳. در هر مرحله پس از انعکاس همدلانه، فقط یک سوال شفاف و عمیق برای شفاف‌تر شدن الگوهای ارتباطی یا جنسی بپرس.
 """
-
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=system_prompt
-)
 
 st.set_page_config(page_title="اطلس مایند | مصاحبه بالینی هوشمند", page_icon="🧠", layout="wide")
 
@@ -35,10 +35,7 @@ st.markdown("""
 st.title("🧠 اطلس مایند | مصاحبه بالینی هوشمند")
 st.caption("ارزیابی تخصصی و پویا جهت تحلیل الگوهای ارتباطی و ساخت اثر انگشت جنسی")
 
-# مقداردهی حافظه چت
-if "chat_session" not in st.session_state:
-    st.session_state.chat_session = model.start_chat(history=[])
-
+# مقداردهی پیام‌ها در حافظه
 if "messages" not in st.session_state:
     initial_msg = "سلام، خوش آمدید. من اینجا هستم تا بدون هیچ قضاوت یا محدودیتی شنونده شما باشم.\n\nچه دغدغه یا مشکلی در رابطه عاطفی یا جنسی خود احساس می‌کنید؟ هر طور راحت هستید برام بنویسید."
     st.session_state.messages = [{"role": "assistant", "content": initial_msg}]
@@ -48,24 +45,36 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# دریافت ورودی مراجع
+# دریافت ورودی کاربر
 if prompt := st.chat_input("پاسخ خود را اینجا بنویسید..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # ارسال به هوش مصنوعی و دریافت پاسخ پویا
-    try:
-        response = st.session_state.chat_session.send_message(prompt)
-        ai_response = response.text
-    except Exception as e:
-        ai_response = "خطا در برقراری ارتباط با مدل هوش مصنوعی. لطفاً دوباره تلاش کنید."
+    # آماده‌سازی تاریخچه گفتگو برای ارسال به مدل
+    contents = []
+    for m in st.session_state.messages:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
 
-    st.session_state.messages.append({"role": "assistant", "content": ai_response})
     with st.chat_message("assistant"):
-        st.markdown(ai_response)
+        with st.spinner("در حال تحلیل..."):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.7,
+                    )
+                )
+                ai_response = response.text
+                st.markdown(ai_response)
+                st.session_state.messages.append({"role": "assistant", "content": ai_response})
+            except Exception as e:
+                st.error(f"خطا در دریافت پاسخ: {e}")
 
-    # نمایش اثر انگشت جنسی پس از چند قدم مصاحبه
+    # نمایش اثر انگشت جنسی پس از ۳ پیام کاربر
     user_count = len([m for m in st.session_state.messages if m["role"] == "user"])
     if user_count >= 3:
         st.divider()
@@ -91,3 +100,4 @@ if prompt := st.chat_input("پاسخ خود را اینجا بنویسید..."):
             st.write("**بسته تمرینات خودیاری و پیگیری:**")
             st.caption("🎧 پادکست ۱: «درک الگوهای صمیمیت در رابطه»")
             st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+            
