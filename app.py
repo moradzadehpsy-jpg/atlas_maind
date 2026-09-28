@@ -2,89 +2,83 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="اطلس مایند | Mind Atlas", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="اطلس مایند | چت اختصاصی", page_icon="🧠", layout="wide")
 
 st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
-    .stButton>button { background-color: #4A154B; color: white; border-radius: 8px; width: 100%; }
-    .stTextInput>div>div>input { text-align: right; }
+    .stChatMessage { text-align: right; direction: rtl; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🧠 پلتفرم هوشمند اطلس مایند (Mind Atlas)")
-st.caption("شناسنامه اختصاصی اثر انگشت جنسی و همراه هوشمند خودیاری زوجین")
+st.title("🧠 اطلس مایند | مصاحبه بالینی هوشمند")
+st.caption("مصاحبه تطبیقی و همدلانه جهت تحلیل الگوهای ارتباطی و ساخت اثر انگشت جنسی")
 
-if 'step' not in st.session_state:
-    st.session_state.step = 1
-if 'answers' not in st.session_state:
-    st.session_state.answers = {}
+# مقداردهی اولیه تاریخچه چت
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "سلام، خوش آمدید. من اینجا هستم تا بدون هیچ قضاوت یا محدودیتی شنونده شما باشم.\n\nچه دغدغه یا مشکلی در رابطه عاطفی یا جنسی خود احساس می‌کنید؟ هر طور راحت هستید برام بنویسید."}
+    ]
 
-if st.session_state.step == 1:
-    st.subheader("سلام، خوش آمدید. ما اینجا هستیم تا بدون هیچ قضاوتی شنونده شما باشیم.")
-    complaint = st.text_area("چه دغدغه یا مشکلی در رابطه عاطفی یا جنسی خود احساس می‌کنید؟", 
-                             placeholder="مثلاً: مدتی است نسبت به همسرم حس و تمایلی ندارم...")
-    
-    if st.button("ادامه و شروع ارزیابی اختصاصی"):
-        if complaint.strip():
-            st.session_state.answers['chief_complaint'] = complaint
-            st.session_state.step = 2
-            st.rerun()
-        else:
-            st.warning("لطفاً ابتدا دغدغه اصلی خود را کوتاه بنویسید.")
+# نمایش پیام‌های قبلی چت
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-elif st.session_state.step == 2:
-    st.subheader("ارزیابی عمیق‌تر الگوی ارتباطی")
-    st.info("پاسخ‌های شما کاملاً محرمانه نگه داشته می‌شوند.")
-    
-    q1 = st.radio("وقتی بین شما و همسرتان سردی یا مشکلی پیش می‌آید، معمولاً کدام رفتار رخ می‌دهد؟",
-                  ["من سکوت می‌کنم و عقب می‌کشم، ولی همسرم بحث را ادامه می‌دهد.",
-                   "همسرم سکوت می‌کند و من اصرار به صحبت و حل آن دارم.",
-                   "هر دو عصبانی می‌شویم و بحث شدید پیش می‌آید.",
-                   "هیچ‌کدام حرفی نمی‌زنیم و فقط فاصله می‌گیریم."])
-    
-    q2 = st.text_area("در صورت پیشنهاد صمیمیت از طرف همسرتان، چه حس یا فکری سراغتان می‌آید؟",
-                      placeholder="مثلاً: احساس خستگی، احساس اجبار یا خشم...")
-    
-    if st.button("تحلیل و ساخت اثر انگشت جنسی"):
-        st.session_state.answers['q1'] = q1
-        st.session_state.answers['q2'] = q2
-        st.session_state.step = 3
-        st.rerun()
+# دریافت پاسخ مراجع
+if prompt := st.chat_input("پاسخ خود را اینجا بنویسید..."):
+    # افزودن پاسخ مراجع به چت
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-elif st.session_state.step == 3:
-    st.success("ارزیابی شما با موفقیت انجام شد!")
+    # شبیه‌سازی منطق تحلیل همدلانه و سوال باز بعدی توسط AI
+    user_count = len([m for m in st.session_state.messages if m["role"] == "user"])
     
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("اثر انگشت جنسی اختصاصی شما")
-        categories = ['دلبستگی ایمن', 'شفقت به خود', 'ابراز صمیمیت', 'امنیت بدنی', 'انعطاف شناختی']
-        values = [40, 30, 25, 50, 45]
+    if user_count == 1:
+        ai_response = (
+            "متوجه فشار و حس خستگی سنگینی که تحمل می‌کنید هستم... اینکه با وجود تمام این سختی‌ها مایلید درباره‌اش صحبت کنید، نشان‌دهنده اهمیت و ارزش این رابطه برای شماست.\n\n"
+            "برای اینکه ابعاد بیشتری از این الگو را شفاف کنیم: **وقتی در برابر خواسته یا رفتار همسرتان حس خشم یا انزجار سراغتان می‌آید، در آن لحظه دقیقاً چه فکر یا صدایی در ذهنتان می‌پیچد؟**"
+        )
+    elif user_count == 2:
+        ai_response = (
+            "این حس بد نسبت به خودتان و داد زدن، در واقع یک «سپر دفاعی کاملاً طبیعی» برای حفاظت از مرزهای آسیب‌دیده‌تان است، نه یک رفتار بی‌دلیل.\n\n"
+            "دوست دارم کمی عمیق‌تر شویم: **وقتی این خشم فروکش می‌کند، رابطه عاطفی و گفتگوهای غیرجنسی شما به چه شکلی درمی‌آید؟ آیا فضای صمیمیت هم قفل می‌شود؟**"
+        )
+    else:
+        ai_response = (
+            "ممنون از پاسخ‌های شفاف و شجاعانه‌تان. تا این مرحله الگوی اصلی ارتباطی شما استخراج شد.\n\n"
+            "اکنون شناسنامه بصری **«اثر انگشت جنسی»** شما آماده است و می‌توانید بسته خودیاری اختصاصی‌تان را مشاهده کنید."
+        )
+
+    # افزودن پاسخ AI به چت
+    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+    with st.chat_message("assistant"):
+        st.markdown(ai_response)
+
+    # نمایش اثر انگشت جنسی در انتهای مصاحبه
+    if user_count >= 3:
+        st.divider()
+        st.subheader("📊 اثر انگشت جنسی و بسته خودیاری اختصاصی شما")
         
-        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-        values += values[:1]
-        angles += angles[:1]
-        
-        fig, ax = plt.subplots(figsize=(4, 4), subplot_kw=dict(polar=True))
-        ax.fill(angles, values, color='#8B5CF6', alpha=0.4)
-        ax.plot(angles, values, color='#6D28D9', linewidth=2)
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(categories, fontsize=9)
-        st.pyplot(fig)
-        
-    with col2:
-        st.subheader("بسته خودیاری اختصاصی شما")
-        st.write("بر اساس شناسنامه شما، این راهکارهای ویژه آماده شده است:")
-        
-        st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
-        st.caption("🎧 پادکست ۵ دقیقه‌ای: «آرامش بدنی و رهایی از سرزنش خود»")
-        
-        st.download_button("📖 دانلود کتابچه راهنمای اختصاصی (PDF)", 
-                           data="محتوای کتابچه خودیاری...", 
-                           file_name="Self_Help_Guide.txt")
-        
-        if st.button("شروع مجدد ارزیابی"):
-            st.session_state.step = 1
-            st.rerun()
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            categories = ['دلبستگی ایمن', 'شفقت به خود', 'ابراز صمیمیت', 'امنیت بدنی', 'انعطاف شناختی']
+            values = [35, 25, 30, 45, 50]
+            
+            angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
+            
+            fig, ax = plt.subplots(figsize=(4, 4), subplot_kw=dict(polar=True))
+            ax.fill(angles, values, color='#8B5CF6', alpha=0.4)
+            ax.plot(angles, values, color='#6D28D9', linewidth=2)
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(categories, fontsize=9)
+            st.pyplot(fig)
+            
+        with col2:
+            st.write("**بسته تمرینات خودیاری و پیگیری:**")
+            st.caption("🎧 پادکست ۱: «رهایی از سرزنش خود و خشم ناگهانی»")
+            st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
             
