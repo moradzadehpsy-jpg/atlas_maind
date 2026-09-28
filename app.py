@@ -38,7 +38,7 @@ if prompt := st.chat_input("پاسخ خود را بنویسید..."):
                 system_prompt = "تو یک روانشناس بالینی متخصص زوج‌درمانی و سلامت جنسی هستی. پاسخ‌های تو باید کاملاً همدلانه، صمیمی، بدون قضاوت و کوتاه (حدود ۲ تا ۳ جمله) باشد. در پایان هر پاسخ فقط یک سوال باز جهت ارزیابی عمیق‌تر بپرس."
 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.8-flash',
                     contents=prompt,
                     config={'system_instruction': system_prompt}
                 )
@@ -47,4 +47,3 @@ if prompt := st.chat_input("پاسخ خود را بنویسید..."):
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
                 st.error(f"خطا در برقراری ارتباط: {e}")
-                
