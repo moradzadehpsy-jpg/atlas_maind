@@ -1,5 +1,6 @@
 import streamlit as st
 from google import genai
+import time
 
 # تنظیمات اولیه صفحه
 st.set_page_config(page_title="اطلس مایند | Mind Atlas", page_icon="🧠", layout="centered")
@@ -29,6 +30,30 @@ SYSTEM_PROMPT = """
 # راه‌اندازی کلاینت جدید گوگل
 client = genai.Client(api_key=api_key)
 
+# لیست مدل‌ها به ترتیب اولویت (در صورت شلوغی سرور، مدل بعدی تست می‌شود)
+MODELS_TO_TRY = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
+
+def generate_response_with_retry(prompt):
+    for model_name in MODELS_TO_TRY:
+        # ۳ بار تلاش برای هر مدل در صورت شلوغی سرور
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config={'system_instruction': SYSTEM_PROMPT}
+                )
+                return response.text
+            except Exception as e:
+                # اگر خطای شلوغی سرور (503) بود، چند ثانیه صبر کن و دوباره بزن
+                if "503" in str(e) or "high demand" in str(e).lower():
+                    time.sleep(2)  # ۲ ثانیه صبر
+                    continue
+                else:
+                    # اگر خطای دیگری بود برو سراغ مدل بعدی
+                    break
+    raise Exception("سرورهای گوگل در حال حاضر بسیار شلوغ هستند. لطفاً چند لحظه بعد دوباره پیام دهید.")
+
 # مدیریت حافظه چت
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -49,14 +74,9 @@ if prompt := st.chat_input("هر چی توی دلت هست رو اینجا بن�
     with st.chat_message("assistant"):
         with st.spinner("در حال فکر کردن..."):
             try:
-                # استفاده از نام مدل جدید مورد تایید گوگل
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=prompt,
-                    config={'system_instruction': SYSTEM_PROMPT}
-                )
-
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                reply_text = generate_response_with_retry(prompt)
+                st.markdown(reply_text)
+                st.session_state.messages.append({"role": "assistant", "content": reply_text})
             except Exception as e:
-                st.error(f"خطا در دریافت پاسخ: {e}")
+                st.error(f"خطا: {e}")
+                
