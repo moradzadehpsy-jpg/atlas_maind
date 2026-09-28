@@ -10,7 +10,7 @@ st.markdown("""
     .stButton>button { background-color: #4A154B; color: white; border-radius: 8px; width: 100%; }
     .stTextInput>div>div>input { text-align: right; }
     </style>
-""", unsafe_style_modal=True)
+""", unsafe_allow_html=True)
 
 st.title("🧠 پلتفرم هوشمند اطلس مایند (Mind Atlas)")
 st.caption("شناسنامه اختصاصی اثر انگشت جنسی و همراه هوشمند خودیاری زوجین")
@@ -87,4 +87,4 @@ elif st.session_state.step == 3:
         if st.button("شروع مجدد ارزیابی"):
             st.session_state.step = 1
             st.rerun()
-      
+            
