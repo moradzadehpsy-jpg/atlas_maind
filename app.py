@@ -1,65 +1,69 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
 
+# ۱. تنظیمات صفحه
 st.set_page_config(page_title="اطلس مایند | Mind Atlas", page_icon="🧠", layout="centered")
 
-st.title("🧠 پلتفرم هوشمند اطلس مایند")
-st.caption("همراه هوشمند و ارزیابی اختصاصی روابط زوجین")
+st.title("🧠 اطلس مایند")
+st.caption("فضایی امن، صمیمانه و بدون قضاوت برای گفتگو درباره روابط و سلامت جنسی")
 
-# بررسی وجود کلید API
-if "OPENROUTER_API_KEY" not in st.secrets:
-    st.error("لطفاً کلید OPENROUTER_API_KEY را در بخش Secrets تنظیم کنید.")
+# ۲. بررسی کلید API
+if "GEMINI_API_KEY" not in st.secrets:
+    st.error("لطفاً کلید API را در بخش Secrets اضافه کنید.")
     st.stop()
 
-api_key = st.secrets["OPENROUTER_API_KEY"]
+api_key = st.secrets["GEMINI_API_KEY"]
 
-# مقداردهی اولیه پیام‌ها
+# ۳. طراحی پرامپت با تاکید ویژه بر «لحن انسانی و درمانگرانه»
+HUMANIZED_CLINICAL_PROMPT = """
+تو «اطلس مایند» هستی؛ یک روانشناس بالینی و زوج‌درمانگر صمیمی، بسیار باتجربه، آرام و همدل.
+بزرگ‌ترین هدف تو این است که کاربر احساس کند با یک «انسان واقعی، فهمیده و پذیرا» چت می‌کند، نه یک ربات خشک یا کتاب قانون!
+
+[دستورالعمل‌های لحن و زبان انسانی]:
+۱. صمیمی و طبیعی حرف بزن: از به‌کار بردن جملات کتابی سنگین، نصیحت‌های متکلفانه و کلمات کلیشه‌ای (مثل «پذیرش واقعیت»، «راهکار هوشمندانه») مطلقاً خودداری کن.
+۲. اعتباردهی واقعی (Emotional Validation): وقتی کاربر از درد، خیانت، حس بد یا ترس صحبت می‌کند، مانند یک انسان واقعی ابراز همدردی کن. به او بگو که احساسش کاملاً طبیعی است.
+۳. عدم صدور نسخه و نسخه پیچیدن: هرگز تا وقتی که مراجع را کامل نشناخته‌ای، راهکار ارائه نده.
+۴. کوتاه‌نویسی: جملات طولانی و منبرگونه ننویس! پاسخ‌های تو باید کوتاه (۲ تا ۴ جمله)، زلال و عمیق باشند.
+۵. تک‌سوال طبیعی: در انتهای هر پاسخ، فقط یک سوال بسیار نرم و طبیعی بپرس که کاربر راحت بتواند صحبتش را ادامه دهد.
+
+[رویکرد تخصصی بالینی]:
+- نگرش سیستمی: مشکلات جنسی و عاطفی را حاصل چرخه دوطرفه رابطه ببین.
+- ردیابی طرحواره‌ها: به باورهای عمیق کاربر درباره خودش (مثل حس نقص، شرم یا سرزنش خود) توجه کن.
+"""
+
+# ۴. راه‌اندازی مدل
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    system_instruction=HUMANIZED_CLINICAL_PROMPT
+)
+
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "سلام، خوش آمدید. من اینجا هستم تا بدون هیچ قضاوت یا محدودیتی شنونده شما باشم.\n\nچه دغدغه یا مشکلی در رابطه عاطفی یا جنسی خود احساس می‌کنید؟"}
-    ]
+    st.session_state.messages = []
 
-# نمایش تاریخچه گفتگو
+# پیام شروع صمیمی
+if len(st.session_state.messages) == 0:
+    welcome_msg = "سلام، خوش اومدی. من اینجام تا در یک فضای کاملاً امن و محرمانه، بدون هیچ قضاوت یا تعارفی به حرفات گوش بدم.\n\nدوست داری از کجای رابطه‌تون یا دغدغه‌ای که الان داری شروع کنیم؟"
+    st.session_state.messages.append({"role": "assistant", "content": welcome_msg})
+
+# ۵. نمایش پیام‌ها
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# دریافت ورودی کاربر
-if prompt := st.chat_input("پاسخ خود را بنویسید..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+# ۶. دریافت پیام از کاربر
+if user_input := st.chat_input("هر چی توی دلت هست رو اینجا بنویس..."):
+    st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(user_input)
 
     with st.chat_message("assistant"):
-        with st.spinner("در حال تحلیل و پاسخگویی..."):
-            system_prompt = "تو یک روانشناس بالینی متخصص زوج‌درمانی و سلامت جنسی هستی. پاسخ‌های تو باید کاملاً همدلانه، صمیمی، بدون قضاوت و کوتاه (حدود ۲ تا ۳ جمله) باشد. در پایان هر پاسخ فقط یک سوال باز جهت ارزیابی عمیق‌تر بپرس."
-            
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://streamlit.io",
-                "X-Title": "Mind Atlas"
-            }
-            
-            # آماده‌سازی پرامپت‌ها
-            api_messages = [{"role": "system", "content": system_prompt}]
-            for m in st.session_state.messages:
-                api_messages.append({"role": m["role"], "content": m["content"]})
-
-            # استفاده از مسیریاب هوشمند مدل‌های رایگان
-            payload = {
-                "model": "openrouter/free",
-                "messages": api_messages
-            }
-
+        with st.spinner("در حال پاسخگویی..."):
             try:
-                response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-                if response.status_code == 200:
-                    result = response.json()
-                    bot_reply = result['choices'][0]['message']['content']
-                    st.markdown(bot_reply)
-                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                else:
-                    st.error(f"خطای ارتباطی سرور: {response.status_code}. لطفاً مجدداً تلاش کنید.")
+                response = st.session_state.chat.send_message(user_input)
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
-                st.error(f"خطا در ارسال درخواست: {e}")
+                st.error(f"خطایی رخ داد: {e}")
