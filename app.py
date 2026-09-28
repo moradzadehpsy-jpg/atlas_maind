@@ -5,7 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # کلید API مستقیم
-API_KEY = AQ.Ab8RN6KOtjZuh9dMbZ7hGN0y43nLF5zmAar0oWtjb3iAfgK1aQ
+API_KEY = st.secrets["GEMINI_API_KEY"]
+
 
 # ساخت کلاینت جدید
 try:
