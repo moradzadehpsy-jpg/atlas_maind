@@ -1,8 +1,29 @@
 import streamlit as st
+import google.generativeai as genai
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="اطلس مایند | چت اختصاصی", page_icon="🧠", layout="wide")
+# تنظیمات کلید API
+API_KEY = "AQ.Ab8RN6LMAHhN8qtYAgijv7EgRlUjs_aqRGEt2wJsJVmO0cZwag"
+genai.configure(api_key=API_KEY)
+
+# ساخت مدل هوش مصنوعی با دستورالعمل بالینی (System Instruction)
+system_prompt = """
+تو یک روانشناس بالینی متخصص در حوزه اختلالات جنسی و زوج‌درمانی هستی. 
+وظیفه تو مدیریت یک مصاحبه بالینی کوتاه، همدلانه و دقیق برای پلتفرم «اطلس مایند» است.
+
+قوانین مهم:
+۱. فقط و فقط بر اساس کلمات و اظهارات خود مراجع صحبت کن. هیچ فرض، حس، یا برچسبی (مثل خشم، انزجار، خیانت و...) که مراجع مستقیماً به آن اشاره نکرده را به او نسبت نده.
+۲. لحن تو باید کاملاً همدلانه، بدون قضاوت، حرفه‌ای و کوتاه باشد (حداکثر ۲ تا ۳ جمله).
+۳. در هر مرحله پس از انعکاس همدلانه، فقط یک سوال شفاف و عمیق برای شفاف‌تر شدن الگوهای ارتباطی یا جنسی بپرس.
+"""
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=system_prompt
+)
+
+st.set_page_config(page_title="اطلس مایند | مصاحبه بالینی هوشمند", page_icon="🧠", layout="wide")
 
 st.markdown("""
     <style>
@@ -12,45 +33,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🧠 اطلس مایند | مصاحبه بالینی هوشمند")
-st.caption("مصاحبه تطبیقی و همدلانه جهت تحلیل الگوهای ارتباطی و ساخت اثر انگشت جنسی")
+st.caption("ارزیابی تخصصی و پویا جهت تحلیل الگوهای ارتباطی و ساخت اثر انگشت جنسی")
+
+# مقداردهی حافظه چت
+if "chat_session" not in st.session_state:
+    st.session_state.chat_session = model.start_chat(history=[])
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "سلام، خوش آمدید. من اینجا هستم تا بدون هیچ قضاوت یا محدودیتی شنونده شما باشیم.\n\nچه دغدغه یا مشکلی در رابطه عاطفی یا جنسی خود احساس می‌کنید؟ هر طور راحت هستید برام بنویسید."}
-    ]
+    initial_msg = "سلام، خوش آمدید. من اینجا هستم تا بدون هیچ قضاوت یا محدودیتی شنونده شما باشم.\n\nچه دغدغه یا مشکلی در رابطه عاطفی یا جنسی خود احساس می‌کنید؟ هر طور راحت هستید برام بنویسید."
+    st.session_state.messages = [{"role": "assistant", "content": initial_msg}]
 
+# نمایش پیام‌های قبلی
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# دریافت ورودی مراجع
 if prompt := st.chat_input("پاسخ خود را اینجا بنویسید..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    user_count = len([m for m in st.session_state.messages if m["role"] == "user"])
-    
-    if user_count == 1:
-        # پاسخی که کلمات مراجع را نشانه می‌رود بدون فرض حس‌های دیگر
-        ai_response = (
-            f"متوجه هستم... تجربه سردی در رابطه و اختلافاتی که به دنبالش ایجاد میشه، احساس کلافگی زیادی به همراه داره.\n\n"
-            f"برای اینکه بهتر شرایط رو درک کنم: **وقتی حس می‌کنید این سردی بین شما پیش اومده، واکنش همسرتان در برابرش چیه و چطور درباره‌اش صحبت می‌کنید؟**"
-        )
-    elif user_count == 2:
-        ai_response = (
-            "ممنون از توضیحتان. برای اینکه الگوی ارتباطی‌تان دقیق‌تر مشخص شود:\n\n"
-            "**این سردی و فاصله‌ای که ایجاد شده، بیشتر روی بخش صمیمیت و رابطه جنسی اثر گذاشته، یا اینکه رفتارهای عاطفی و گفتگوهای روزمره‌تان هم دچار تغییر شده؟**"
-        )
-    else:
-        ai_response = (
-            "ممنون از پاسخ‌های شفاف شما. اطلاعات لازم برای تحلیل الگوی شما ثبت شد.\n\n"
-            "شناسنامه بصری **«اثر انگشت جنسی»** شما در ادامه آماده مشاهده است."
-        )
+    # ارسال به هوش مصنوعی و دریافت پاسخ پویا
+    try:
+        response = st.session_state.chat_session.send_message(prompt)
+        ai_response = response.text
+    except Exception as e:
+        ai_response = "خطا در برقراری ارتباط با مدل هوش مصنوعی. لطفاً دوباره تلاش کنید."
 
     st.session_state.messages.append({"role": "assistant", "content": ai_response})
     with st.chat_message("assistant"):
         st.markdown(ai_response)
 
+    # نمایش اثر انگشت جنسی پس از چند قدم مصاحبه
+    user_count = len([m for m in st.session_state.messages if m["role"] == "user"])
     if user_count >= 3:
         st.divider()
         st.subheader("📊 اثر انگشت جنسی و بسته خودیاری اختصاصی شما")
@@ -73,6 +89,5 @@ if prompt := st.chat_input("پاسخ خود را اینجا بنویسید..."):
             
         with col2:
             st.write("**بسته تمرینات خودیاری و پیگیری:**")
-            st.caption("🎧 پادکست ۱: «درک الگوهای سردی و صمیمیت در رابطه»")
+            st.caption("🎧 پادکست ۱: «درک الگوهای صمیمیت در رابطه»")
             st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
-            
