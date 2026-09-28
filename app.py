@@ -37,6 +37,8 @@ if prompt := st.chat_input("پاسخ خود را بنویسید..."):
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
+                "HTTP-Referer": "https://streamlit.io",
+                "X-Title": "Mind Atlas"
             }
             
             # آماده‌سازی پرامپت‌ها
@@ -44,8 +46,9 @@ if prompt := st.chat_input("پاسخ خود را بنویسید..."):
             for m in st.session_state.messages:
                 api_messages.append({"role": m["role"], "content": m["content"]})
 
+            # استفاده از مسیریاب هوشمند مدل‌های رایگان
             payload = {
-                "model": "deepseek/deepseek-chat:free", # استفاده از مدل رایگان و فوق‌العاده سریع DeepSeek
+                "model": "openrouter/free",
                 "messages": api_messages
             }
 
