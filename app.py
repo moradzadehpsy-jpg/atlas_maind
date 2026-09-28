@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # کلید API مستقیم
-API_KEY = "AQ.Ab8RN6LMAHhN8qtYAgijv7EgRlUjs_aqRGEt2wJsJVmO0cZwag"
+API_KEY = AQ.Ab8RN6KOtjZuh9dMbZ7hGN0y43nLF5zmAar0oWtjb3iAfgK1aQ
 
 # ساخت کلاینت جدید
 try:
@@ -61,7 +61,7 @@ if prompt := st.chat_input("پاسخ خود را اینجا بنویسید..."):
         with st.spinner("در حال تحلیل..."):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=gemini-1.5-flash
                     contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,
